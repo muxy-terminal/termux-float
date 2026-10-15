@@ -167,7 +167,7 @@ public class TermuxFloatSessionClient extends TermuxTerminalSessionClientBase {
             TerminalColors.COLOR_SCHEME.updateWith(props);
             TerminalSession session = mService.getCurrentSession();
             if (session != null && session.getEmulator() != null) {
-                session.getEmulator().mColors.reset();
+                session.getEmulator().resetColors();
             }
 
             updateBackgroundColor();

@@ -8,8 +8,6 @@ import android.view.MotionEvent;
 
 import com.termux.shared.termux.terminal.TermuxTerminalViewClientBase;
 import com.termux.shared.view.KeyboardUtils;
-import com.termux.terminal.KeyHandler;
-import com.termux.terminal.TerminalEmulator;
 import com.termux.terminal.TerminalSession;
 
 public class TermuxFloatViewClient extends TermuxTerminalViewClientBase {
@@ -73,16 +71,6 @@ public class TermuxFloatViewClient extends TermuxTerminalViewClientBase {
     @Override
     public boolean shouldBackButtonBeMappedToEscape() {
         return mView.getProperties().isBackKeyTheEscapeKey();
-    }
-
-    @Override
-    public boolean shouldEnforceCharBasedInput() {
-        return mView.getProperties().isEnforcingCharBasedInput();
-    }
-
-    @Override
-    public boolean shouldUseCtrlSpaceWorkaround() {
-        return mView.getProperties().isUsingCtrlSpaceWorkaround();
     }
 
     @Override
@@ -223,10 +211,9 @@ public class TermuxFloatViewClient extends TermuxTerminalViewClientBase {
             }
 
             if (resultingKeyCode != -1) {
-                TerminalEmulator term = session.getEmulator();
-                session.write(KeyHandler.getCode(resultingKeyCode, 0, term.isCursorKeysApplicationMode(), term.isKeypadApplicationMode()));
+                mView.getTerminalView().handleKeyCode(resultingKeyCode, 0);
             } else if (resultingCodePoint != -1) {
-                session.writeCodePoint(altDown, resultingCodePoint);
+                mView.getTerminalView().inputCodePoint(0, resultingCodePoint, false, altDown);
             }
             return true;
         }

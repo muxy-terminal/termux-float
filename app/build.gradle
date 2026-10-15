@@ -11,8 +11,9 @@ android {
         applicationId "com.termux.window"
         minSdk project.properties.minSdkVersion.toInteger()
         targetSdk project.properties.targetSdkVersion.toInteger()
-        versionCode 1001
-        versionName "0.17.0"
+        versionCode 1002
+        versionName "0.17.0+muxy.2"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)
@@ -60,6 +61,7 @@ android {
     }
 
     packagingOptions {
+        jniLibs.useLegacyPackaging = true
         // Remove terminal-shared JNI libs added via termux-shared dependency
         exclude "lib/*/liblocal-socket.so"
     }
@@ -69,11 +71,13 @@ dependencies {
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:1.1.5"
 
     testImplementation "junit:junit:4.13.2"
+    androidTestImplementation "androidx.test:runner:1.6.2"
+    androidTestImplementation "androidx.test.ext:junit:1.2.1"
 
     implementation "androidx.annotation:annotation:1.9.1"
 
-    implementation "com.termux.termux-app:termux-shared:8aca6dbbf4"
-    implementation "com.termux.termux-app:terminal-view:8aca6dbbf4"
+    implementation project(":termux-shared")
+    implementation project(":terminal-view")
 
     // Use if below libraries are published locally by termux-app with `./gradlew publishReleasePublicationToMavenLocal` and used with `mavenLocal()`.
     // If updates are done, republish there and sync project with gradle files here

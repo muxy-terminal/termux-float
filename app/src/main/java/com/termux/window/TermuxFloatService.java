@@ -5,8 +5,10 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.IBinder;
@@ -34,6 +36,12 @@ public class TermuxFloatService extends Service {
     private boolean mVisibleWindow = true;
 
     private static final String LOG_TAG = "TermuxFloatService";
+    private final BroadcastReceiver mStyleReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (mFloatingWindow != null) mFloatingWindow.reloadViewStyling();
+        }
+    };
+    private boolean mStyleReceiverRegistered;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -45,6 +53,10 @@ public class TermuxFloatService extends Service {
         runStartForeground();
         TermuxFloatApplication.setLogConfig(this, false);
         Logger.logVerbose(LOG_TAG, "onCreate");
+        IntentFilter filter = new IntentFilter(TermuxConstants.TERMUX_APP.TERMUX_ACTIVITY.ACTION_RELOAD_STYLE);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(mStyleReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(mStyleReceiver, filter);
+        mStyleReceiverRegistered = true;
     }
 
     @Override
@@ -91,9 +103,18 @@ public class TermuxFloatService extends Service {
     public void onDestroy() {
         super.onDestroy();
         Logger.logVerbose(LOG_TAG, "onDestroy");
+        if (mStyleReceiverRegistered) {
+            unregisterReceiver(mStyleReceiver);
+            mStyleReceiverRegistered = false;
+        }
 
-        if (mFloatingWindow != null)
+        if (mFloatingWindow != null) {
             mFloatingWindow.closeFloatingWindow();
+            mFloatingWindow = null;
+        }
+        TerminalSession session = getCurrentSession();
+        if (session != null) session.dispose();
+        mSession = null;
 
         runStopForeground();
     }

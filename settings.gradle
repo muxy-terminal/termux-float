@@ -1,1 +1,2 @@
 include ':app'
+apply from: 'gradle/muxy-libraries.settings.gradle'
