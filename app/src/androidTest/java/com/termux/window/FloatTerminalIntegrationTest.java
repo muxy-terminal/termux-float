@@ -137,7 +137,13 @@ public class FloatTerminalIntegrationTest {
     @Test public void liveGboardTypingReachesTheFloatPty() throws Exception {
         String expected = InstrumentationRegistry.getArguments().getString("gboardExpected");
         org.junit.Assume.assumeNotNull(expected);
+        if ("true".equals(InstrumentationRegistry.getArguments().getString("gboardSubmittedContext"))) {
+            onMain(() -> { input.commitText("                  ", 1); enter(); });
+        }
+        boolean alternate = "true".equals(InstrumentationRegistry.getArguments().getString("gboardAlternateScreen"));
+        if (alternate) onMain(() -> session.write("printf '\\033[?1049h'\r"));
         capture();
+        if (alternate) onMain(() -> assertTrue(session.getEmulator().isAlternateBufferActive()));
         onMain(() -> {
             android.view.inputmethod.InputMethodManager manager = (android.view.inputmethod.InputMethodManager)
                     service.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
@@ -178,6 +184,35 @@ public class FloatTerminalIntegrationTest {
             enter();
         });
         assertCaptured("안\033[D한");
+    }
+
+    private void assertEmptyEditorBackspacesPreserveHangul(boolean alternate) throws Exception {
+        org.junit.Assume.assumeTrue(android.os.Build.VERSION.SDK_INT >= 34);
+        onMain(() -> { input.commitText("   ", 1); enter(); });
+        if (alternate) onMain(() -> session.write("printf '\\033[?1049h'\r"));
+        capture();
+        onMain(() -> {
+            assertEquals(alternate, session.getEmulator().isAlternateBufferActive());
+            assertEquals(3, input.documentOffset());
+            for (int i = 0; i < 8; i++) {
+                input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
+                input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
+            }
+            assertEquals(0, input.documentOffset());
+            input.commitText("ㅇ", 1);
+            assertTrue(input.replaceText(0, 1, "아", 1, null));
+            assertTrue(input.replaceText(0, 1, "안", 1, null));
+            enter();
+        });
+        assertCaptured("안");
+    }
+
+    @Test public void emptyPromptBackspacesPreserveTheNextHangulSyllable() throws Exception {
+        assertEmptyEditorBackspacesPreserveHangul(false);
+    }
+
+    @Test public void alternateScreenBackspacesPreserveTheNextHangulSyllable() throws Exception {
+        assertEmptyEditorBackspacesPreserveHangul(true);
     }
 
     @Test public void stylingUpdatesNativeColorsAndClosingDisposesTheCore() {
