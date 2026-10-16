@@ -1,22 +1,22 @@
-# Termux:Float 0.17.0+muxy.4
+# Termux:Float 0.17.0+muxy.5
 
-Use the same touchscreen gestures as muxy 0.119.7:
+Restore the original Termux-style tap policy shared with muxy 0.119.8:
 
-- A confirmed single tap opens the keyboard without a terminal click.
-- A completed double tap sends one mouse press/release pair when the application requests mouse reporting. It does not open the keyboard.
-- The outer overlay no longer opens the keyboard on every touch release. Touch down may restore window focus without requesting the IME.
-- Drags, long presses, cancelled gestures, and multitouch do not become TUI clicks. Physical mouse and touchpad paths are unchanged.
+- With mouse reporting enabled, one tap sends an immediate mouse press/release pair and does not request the keyboard.
+- Without mouse reporting, a confirmed single tap opens the keyboard on either primary or alternate screens.
+- Double tap has no custom action. Two taps in a mouse-reporting application are two ordinary clicks.
+- A click that exits the alternate screen or disables mouse reporting cannot become a delayed keyboard request. Contacts invalidated by session, screen, or mouse-state changes are discarded.
 
-Single-tap handling waits for Android's double-tap decision. Double taps do not hide an already open keyboard. Initial launch, explicit window controls, and keyboard shortcuts retain keyboard access.
+The overlay does not open the keyboard on every touch release. Explicit window controls and the keyboard shortcut remain available. TUI widget focus is not exposed by the terminal protocol.
 
-The shared terminal libraries are pinned to muxy `7a03b9938e9d9eb4a1456045d60147dd54848d02`. This includes the excess-Backspace Hangul fix from muxy.3.
+The terminal libraries are pinned to muxy `4f19a15cdbdce7334a7f2429bf45aa086b698896`. Existing libghostty-vt, CJK input, excess-Backspace, native color, and disposal behavior is retained.
 
-Install over previous muxy-signed Float builds. Package `com.termux.window`, version code 1004, minimum Android 7. Shared UID, permissions, and certificate are unchanged:
+Install over earlier muxy-signed Float builds without uninstalling. Package `com.termux.window`, version code 1005, minimum Android 7. Shared UID, permissions, and certificate are unchanged:
 
 ```text
 756768af514d3fa0d1c214d54dabd7b0cd088a1723a22f520b90e8e8545262ce
 ```
 
-The overlay/PTY suite checks single/double tap keyboard visibility and exact mouse bytes on ordinary/alternate screens with modes 0, 1000, 1002, and 1003. It also checks CJK input, empty-editor deletion, native colors, and disposal. Physical devices and arbitrary TUI bindings remain outside the verified matrix.
+The overlay/PTY suite covers ordinary/alternate screens with modes 0/1000/1002/1003, keyboard visibility, exact click bytes, explicit keyboard access, CJK commits, deletion, native colors, and disposal. Physical devices and per-widget focus in arbitrary TUIs remain outside the verified matrix.
 
-The corresponding-source archive and GPLv3 text accompany the APK. The coordinated distribution records exact source commits, hashes, and compatibility coverage.
+Corresponding source, GPLv3 text, build provenance, and checksums accompany the release.

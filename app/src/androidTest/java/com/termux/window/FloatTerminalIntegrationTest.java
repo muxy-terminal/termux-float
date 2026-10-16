@@ -249,7 +249,7 @@ public class FloatTerminalIntegrationTest {
         });
     }
 
-    @Test public void overlaySingleTapOpensKeyboardAndDoubleTapSendsOnlyOneClick() throws Exception {
+    @Test public void overlayUsesMouseReportingInsteadOfAlternateScreenToRouteTaps() throws Exception {
         android.app.UiAutomation automation = InstrumentationRegistry.getInstrumentation().getUiAutomation();
         android.accessibilityservice.AccessibilityServiceInfo info = automation.getServiceInfo();
         int previous = info.flags;
@@ -272,12 +272,14 @@ public class FloatTerminalIntegrationTest {
                     awaitKeyboard(false);
                     Thread.sleep(500);
                     overlayTap();
-                    Thread.sleep(70);
-                    overlayTap();
-                    Thread.sleep(android.view.ViewConfiguration.getDoubleTapTimeout() + 200);
-                    assertFalse("A Float double tap opened the keyboard", keyboardVisible());
-                    overlayTap();
-                    awaitKeyboard(true);
+                    if (mode == 0) {
+                        awaitKeyboard(true);
+                    } else {
+                        Thread.sleep(android.view.ViewConfiguration.getDoubleTapTimeout() + 200);
+                        assertFalse("A Float application click opened the keyboard", keyboardVisible());
+                        onMain(() -> floating.changeFocus(true));
+                        awaitKeyboard(true);
+                    }
                     onMain(this::enter);
                     assertCaptured(mode == 0 ? "" : "\033[<0;1;1M\033[<0;1;1m");
                 }
