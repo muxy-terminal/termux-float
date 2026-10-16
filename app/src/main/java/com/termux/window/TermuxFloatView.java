@@ -226,16 +226,8 @@ public class TermuxFloatView extends LinearLayout {
 
         boolean clickedInside = (touchX >= x) && (touchX <= (x + layoutParams.width)) && (touchY >= y) && (touchY <= (y + layoutParams.height));
 
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                if (!clickedInside) changeFocus(false);
-                break;
-            case MotionEvent.ACTION_UP:
-                if (clickedInside) {
-                    changeFocus(true);
-                    showTouchKeyboard();
-                }
-                break;
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            changeFocus(clickedInside, false);
         }
         return false;
     }
@@ -301,11 +293,15 @@ public class TermuxFloatView extends LinearLayout {
      * Visually indicate focus and show the soft input as needed.
      */
     void changeFocus(boolean newFocus) {
+        changeFocus(newFocus, true);
+    }
+
+    private void changeFocus(boolean newFocus, boolean showKeyboard) {
         if (newFocus && mFloatingBubbleManager.isMinimized()) {
             mFloatingBubbleManager.displayAsFloatingWindow();
         }
         if (newFocus == withFocus) {
-            if (newFocus) showTouchKeyboard();
+            if (newFocus && showKeyboard) showTouchKeyboard();
             return;
         }
         withFocus = newFocus;
@@ -313,6 +309,7 @@ public class TermuxFloatView extends LinearLayout {
         if (getWindowToken() != null)
             mWindowManager.updateViewLayout(this, layoutParams);
         setAlpha(newFocus ? ALPHA_FOCUS : ALPHA_NOT_FOCUS);
+        if (newFocus && showKeyboard) showTouchKeyboard();
     }
 
     public void closeFloatingWindow() {

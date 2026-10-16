@@ -35,6 +35,7 @@ public class FloatTerminalIntegrationTest {
     private TerminalSession session;
     private TerminalInputConnection input;
     private File capture;
+    private TermuxFloatView floating;
 
     private void onMain(Runnable action) {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(action);
@@ -75,7 +76,7 @@ public class FloatTerminalIntegrationTest {
             try {
                 Field window = TermuxFloatService.class.getDeclaredField("mFloatingWindow");
                 window.setAccessible(true);
-                TermuxFloatView floating = (TermuxFloatView) window.get(service);
+                floating = (TermuxFloatView) window.get(service);
                 assertNotNull(floating);
                 view = floating.getTerminalView();
                 session = service.getCurrentSession();
@@ -213,6 +214,78 @@ public class FloatTerminalIntegrationTest {
 
     @Test public void alternateScreenBackspacesPreserveTheNextHangulSyllable() throws Exception {
         assertEmptyEditorBackspacesPreserveHangul(true);
+    }
+
+    private boolean keyboardVisible() {
+        android.app.UiAutomation automation = InstrumentationRegistry.getInstrumentation().getUiAutomation();
+        for (android.view.accessibility.AccessibilityWindowInfo window : automation.getWindows()) {
+            if (window.getType() == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD) return true;
+        }
+        return false;
+    }
+
+    private void awaitKeyboard(boolean visible) throws InterruptedException {
+        long deadline = SystemClock.uptimeMillis() + 10000;
+        while (keyboardVisible() != visible) {
+            if (SystemClock.uptimeMillis() > deadline) fail("Float keyboard visibility did not become " + visible);
+            Thread.sleep(50);
+        }
+    }
+
+    private void overlayTap() {
+        onMain(() -> {
+            int[] origin = new int[2];
+            view.getLocationOnScreen(origin);
+            int[] parent = new int[2];
+            floating.getLocationOnScreen(parent);
+            long time = SystemClock.uptimeMillis();
+            for (int action : new int[]{android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_UP}) {
+                android.view.MotionEvent event = android.view.MotionEvent.obtain(time, time + action * 20,
+                        action, origin[0] + 10, origin[1] + 10, 0);
+                event.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+                event.setLocation(origin[0] - parent[0] + 10, origin[1] - parent[1] + 10);
+                try { assertTrue(floating.dispatchTouchEvent(event)); } finally { event.recycle(); }
+            }
+        });
+    }
+
+    @Test public void overlaySingleTapOpensKeyboardAndDoubleTapSendsOnlyOneClick() throws Exception {
+        android.app.UiAutomation automation = InstrumentationRegistry.getInstrumentation().getUiAutomation();
+        android.accessibilityservice.AccessibilityServiceInfo info = automation.getServiceInfo();
+        int previous = info.flags;
+        info.flags |= android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
+        automation.setServiceInfo(info);
+        try {
+            onMain(floating::showTouchKeyboard);
+            awaitKeyboard(true);
+            for (boolean alternate : new boolean[]{false, true}) {
+                for (int mode : new int[]{0, 1000, 1002, 1003}) {
+                    String output = "\033[?1000l\033[?1002l\033[?1003l\033[?1006h"
+                            + (alternate ? "\033[?1049h" : "\033[?1049l")
+                            + (mode == 0 ? "" : "\033[?" + mode + "h");
+                    capture();
+                    onMain(() -> {
+                        byte[] bytes = output.getBytes(StandardCharsets.UTF_8);
+                        session.getEmulator().append(bytes, bytes.length);
+                        floating.hideTouchKeyboard();
+                    });
+                    awaitKeyboard(false);
+                    Thread.sleep(500);
+                    overlayTap();
+                    Thread.sleep(70);
+                    overlayTap();
+                    Thread.sleep(android.view.ViewConfiguration.getDoubleTapTimeout() + 200);
+                    assertFalse("A Float double tap opened the keyboard", keyboardVisible());
+                    overlayTap();
+                    awaitKeyboard(true);
+                    onMain(this::enter);
+                    assertCaptured(mode == 0 ? "" : "\033[<0;1;1M\033[<0;1;1m");
+                }
+            }
+        } finally {
+            info.flags = previous;
+            automation.setServiceInfo(info);
+        }
     }
 
     @Test public void stylingUpdatesNativeColorsAndClosingDisposesTheCore() {

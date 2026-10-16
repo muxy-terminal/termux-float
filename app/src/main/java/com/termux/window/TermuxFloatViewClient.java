@@ -58,6 +58,15 @@ public class TermuxFloatViewClient extends TermuxTerminalViewClientBase {
     }
 
     @Override
+    public void onSingleTapUp(MotionEvent event) {
+        if (event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)
+                && !event.isFromSource(InputDevice.SOURCE_MOUSE)
+                && !event.isFromSource(InputDevice.SOURCE_TOUCHPAD)) {
+            mView.changeFocus(true);
+        }
+    }
+
+    @Override
     public boolean onLongPress(MotionEvent event) {
         mView.updateLongPressMode(true);
         mView.getLocationOnScreen(mView.location);
